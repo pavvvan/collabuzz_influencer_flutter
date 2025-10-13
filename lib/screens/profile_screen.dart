@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'package:influencer_dashboard/screens/wallet_page.dart';
 import 'package:influencer_dashboard/screens/webview.dart';
 import 'package:influencer_dashboard/screens/welcome_screen.dart';
 import 'package:influencer_dashboard/services/dart/auth_services.dart';
@@ -78,7 +79,10 @@ class _ProfileScreenState extends State<ProfileScreen> {
             _buildProfileCard(profileData, percent),
             const SizedBox(height: 16),
             _buildSectionButton("Influencer Profile", () {
-              // Handle navigation
+              Navigator.push(
+                context,
+                MaterialPageRoute(builder: (_) => const EditProfilePage()),
+              );
             }),
             const SizedBox(height: 20),
             _sectionHeader('Payments'),
@@ -87,7 +91,10 @@ class _ProfileScreenState extends State<ProfileScreen> {
               MaterialPageRoute(builder: (_) => const BillingAddressPage()),
             );
             }),
-            _listTile('Wallet', () {}),
+            _listTile('Wallet', () {Navigator.push(
+              context,
+              MaterialPageRoute(builder: (_) => const WalletPage()),
+            );}),
             _divider(),
             _sectionHeader('Support'),
             _listTile('Faq', () {

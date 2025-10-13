@@ -4,7 +4,6 @@ import 'package:flutter_facebook_auth/flutter_facebook_auth.dart';
 import '../services/dart/Social_media_service.dart';
 import '../services/dart/auth_services.dart';
 
-
 class SocialAccountsPage extends StatefulWidget {
   const SocialAccountsPage({super.key});
 
@@ -17,6 +16,7 @@ class _SocialAccountsPageState extends State<SocialAccountsPage> {
 
   bool isInstagramConnected = false;
   bool isYouTubeConnected = false;
+  bool isLoading = true; // ✅ Added loading flag
   Map<String, dynamic>? instagramData;
   Map<String, dynamic>? youtubeData;
 
@@ -27,10 +27,13 @@ class _SocialAccountsPageState extends State<SocialAccountsPage> {
   }
 
   Future<void> _fetchProfile() async {
-    final data = await AuthServices().getProfile();
-    if (data != null) {
-      final socials = List<Map<String, dynamic>>.from(data['profileData']['socials'] ?? []);
-      setState(() {
+    try {
+      final data = await AuthServices().getProfile();
+      if (data != null) {
+        final socials = List<Map<String, dynamic>>.from(
+          data['profileData']['socials'] ?? [],
+        );
+
         instagramData = socials.firstWhere(
               (s) => s['platform'] == 'instagram',
           orElse: () => {},
@@ -39,9 +42,14 @@ class _SocialAccountsPageState extends State<SocialAccountsPage> {
               (s) => s['platform'] == 'youtube',
           orElse: () => {},
         );
+
         isInstagramConnected = instagramData != null && instagramData!.isNotEmpty;
         isYouTubeConnected = youtubeData != null && youtubeData!.isNotEmpty;
-      });
+      }
+    } catch (e) {
+      debugPrint("Error loading socials: $e");
+    } finally {
+      setState(() => isLoading = false);
     }
   }
 
@@ -106,13 +114,20 @@ class _SocialAccountsPageState extends State<SocialAccountsPage> {
 
     String? selectedContentType = existingData?['contentType'];
 
-    final TextEditingController idController = TextEditingController(text: existingData?['handle'] ?? '');
-    final TextEditingController urlController = TextEditingController(text: existingData?['url'] ?? '');
-    final TextEditingController followersController = TextEditingController(text: existingData?['followers']?.toString() ?? '');
-    final TextEditingController engagementController = TextEditingController(text: existingData?['engagementRate']?.toString() ?? '');
-    final TextEditingController likesController = TextEditingController(text: existingData?['avgLikes']?.toString() ?? '');
-    final TextEditingController viewsController = TextEditingController(text: existingData?['avgViews']?.toString() ?? '');
-    final TextEditingController priceController = TextEditingController(text: existingData?['pricePerPost']?.toString() ?? '');
+    final TextEditingController idController =
+    TextEditingController(text: existingData?['handle'] ?? '');
+    final TextEditingController urlController =
+    TextEditingController(text: existingData?['url'] ?? '');
+    final TextEditingController followersController =
+    TextEditingController(text: existingData?['followers']?.toString() ?? '');
+    final TextEditingController engagementController =
+    TextEditingController(text: existingData?['engagementRate']?.toString() ?? '');
+    final TextEditingController likesController =
+    TextEditingController(text: existingData?['avgLikes']?.toString() ?? '');
+    final TextEditingController viewsController =
+    TextEditingController(text: existingData?['avgViews']?.toString() ?? '');
+    final TextEditingController priceController =
+    TextEditingController(text: existingData?['pricePerPost']?.toString() ?? '');
 
     await showDialog(
       context: context,
@@ -153,15 +168,18 @@ class _SocialAccountsPageState extends State<SocialAccountsPage> {
                       selectedContentType = val;
                       _formKey.currentState?.validate();
                     },
-                    validator: (value) => value == null || value.isEmpty ? 'Please select content type' : null,
+                    validator: (value) =>
+                    value == null || value.isEmpty ? 'Please select content type' : null,
                     decoration: InputDecoration(
                       labelText: "Content Type",
                       labelStyle: const TextStyle(color: Colors.grey),
                       border: OutlineInputBorder(borderRadius: BorderRadius.circular(10)),
-                      contentPadding: const EdgeInsets.symmetric(horizontal: 12, vertical: 16),
+                      contentPadding:
+                      const EdgeInsets.symmetric(horizontal: 12, vertical: 16),
                     ),
                     items: contentTypes
-                        .map((type) => DropdownMenuItem(value: type, child: Text(type, overflow: TextOverflow.ellipsis)))
+                        .map((type) => DropdownMenuItem(
+                        value: type, child: Text(type, overflow: TextOverflow.ellipsis)))
                         .toList(),
                   ),
                   const SizedBox(height: 16),
@@ -181,7 +199,8 @@ class _SocialAccountsPageState extends State<SocialAccountsPage> {
                           showDialog(
                             context: context,
                             barrierDismissible: false,
-                            builder: (_) => const Center(child: CircularProgressIndicator()),
+                            builder: (_) =>
+                            const Center(child: CircularProgressIndicator()),
                           );
 
                           final success = await SocialMediaService().updateSocialProfile(
@@ -189,7 +208,8 @@ class _SocialAccountsPageState extends State<SocialAccountsPage> {
                             handle: idController.text.trim(),
                             url: urlController.text.trim(),
                             followers: int.tryParse(followersController.text.trim()),
-                            engagementRate: double.tryParse(engagementController.text.trim()),
+                            engagementRate:
+                            double.tryParse(engagementController.text.trim()),
                             avgLikes: int.tryParse(likesController.text.trim()),
                             avgViews: int.tryParse(viewsController.text.trim()),
                             contentType: selectedContentType,
@@ -212,10 +232,13 @@ class _SocialAccountsPageState extends State<SocialAccountsPage> {
                         },
                         style: ElevatedButton.styleFrom(
                           backgroundColor: const Color(0xFF671DD1),
-                          padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 12),
-                          shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(30)),
+                          padding:
+                          const EdgeInsets.symmetric(horizontal: 20, vertical: 12),
+                          shape: RoundedRectangleBorder(
+                              borderRadius: BorderRadius.circular(30)),
                         ),
-                        child: const Text("Save", style: TextStyle(color: Colors.white)),
+                        child: const Text("Save",
+                            style: TextStyle(color: Colors.white)),
                       ),
                     ],
                   ),
@@ -240,12 +263,14 @@ class _SocialAccountsPageState extends State<SocialAccountsPage> {
         keyboardType: isNumber ? TextInputType.number : TextInputType.text,
         autovalidateMode: AutovalidateMode.onUserInteraction,
         onChanged: (_) => _formKey.currentState?.validate(),
-        validator: (value) => value == null || value.trim().isEmpty ? 'Please enter $label' : null,
+        validator: (value) =>
+        value == null || value.trim().isEmpty ? 'Please enter $label' : null,
         decoration: InputDecoration(
           labelText: label,
           labelStyle: const TextStyle(color: Colors.grey),
           border: OutlineInputBorder(borderRadius: BorderRadius.circular(10)),
-          contentPadding: const EdgeInsets.symmetric(horizontal: 12, vertical: 16),
+          contentPadding:
+          const EdgeInsets.symmetric(horizontal: 12, vertical: 16),
         ),
       ),
     );
@@ -275,9 +300,11 @@ class _SocialAccountsPageState extends State<SocialAccountsPage> {
         trailing: ElevatedButton(
           onPressed: onConnectOrEdit,
           style: ElevatedButton.styleFrom(
-            backgroundColor: isConnected ? Colors.orange : const Color(0xFF671DD1),
+            backgroundColor:
+            isConnected ? Colors.orange : const Color(0xFF671DD1),
             foregroundColor: Colors.white,
-            shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(30)),
+            shape: RoundedRectangleBorder(
+                borderRadius: BorderRadius.circular(30)),
           ),
           child: Text(isConnected ? 'Edit' : 'Add'),
         ),
@@ -289,7 +316,9 @@ class _SocialAccountsPageState extends State<SocialAccountsPage> {
   Widget build(BuildContext context) {
     return Scaffold(
       backgroundColor: const Color(0xFFF5F5F5),
-      body: Padding(
+      body: isLoading
+          ? const Center(child: CircularProgressIndicator(color: Color(0xFF671DD1)))
+          : Padding(
         padding: const EdgeInsets.all(16),
         child: Column(
           children: [
@@ -297,13 +326,15 @@ class _SocialAccountsPageState extends State<SocialAccountsPage> {
               title: "Instagram",
               icon: "assets/instagram.png",
               data: instagramData,
-              onConnectOrEdit: () => _showSocialForm("Instagram", existingData: instagramData),
+              onConnectOrEdit: () =>
+                  _showSocialForm("Instagram", existingData: instagramData),
             ),
             _buildCard(
               title: "YouTube",
               icon: "assets/youtube.png",
               data: youtubeData,
-              onConnectOrEdit: () => _showSocialForm("YouTube", existingData: youtubeData),
+              onConnectOrEdit: () =>
+                  _showSocialForm("YouTube", existingData: youtubeData),
             ),
           ],
         ),

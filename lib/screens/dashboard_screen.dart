@@ -6,6 +6,7 @@ import 'package:influencer_dashboard/screens/search_filter_page.dart';
 import 'package:influencer_dashboard/screens/social_accounts_page.dart';
 import 'package:influencer_dashboard/screens/welcome_screen.dart';
 
+import 'chat/chat_list_page.dart';
 import 'notification_sceeen.dart';
 
 const Color kPrimaryPurple = Color(0xFF671DD1);
@@ -76,7 +77,18 @@ class _DashboardScreenState extends State<DashboardScreen> {
             ),
 
             const SizedBox(width: 12),
-            _iconWithDot(Icons.chat_bubble_outline_rounded, unread: true),
+
+// ✅ Chat (Message) Icon → routes to ChatListPage
+            GestureDetector(
+              onTap: () {
+                Navigator.push(
+                  context,
+                  MaterialPageRoute(builder: (_) => const ChatListPage()),
+                );
+              },
+              child: _iconWithDot(Icons.chat_bubble_outline_rounded, unread: true),
+            ),
+
           ],
         ),
       ),

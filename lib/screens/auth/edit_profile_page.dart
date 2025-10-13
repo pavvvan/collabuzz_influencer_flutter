@@ -430,59 +430,76 @@ class _EditProfilePageState extends State<EditProfilePage> {
   }
 
 
-  Future<void> _handleImagePick(ImageSource source) async {
-    final permission = source == ImageSource.camera
-        ? await Permission.camera.request()
-        : Platform.isIOS
-        ? await Permission.photos.request()
-        : await Permission.storage.request();
+   Future<void> _handleImagePick(ImageSource source) async {
+     PermissionStatus permission;
 
-    if (permission.isPermanentlyDenied) {
-      _showPermissionDialog();
-      return;
-    }
+     if (source == ImageSource.camera) {
+       permission = await Permission.camera.request();
+     } else {
+       // Gallery permission handling (cross-platform)
+       if (Platform.isIOS) {
+         permission = await Permission.photos.request();
+       } else {
+         // For Android 13+ use Permission.photos or Permission.mediaLibrary
+         if (await Permission.photos.isGranted || await Permission.photos.request().isGranted) {
+           permission = PermissionStatus.granted;
+         } else {
+           permission = await Permission.photos.request();
+         }
+       }
+     }
 
-    if (!permission.isGranted) return;
+     // Handle denied or permanently denied
+     if (permission.isPermanentlyDenied) {
+       _showPermissionDialog();
+       return;
+     }
 
-    final picker = ImagePicker();
-    final pickedFile = await picker.pickImage(source: source);
-    if (pickedFile == null) return;
+     if (!permission.isGranted) {
+       ScaffoldMessenger.of(context).showSnackBar(
+         const SnackBar(content: Text('Permission denied. Please enable it in settings.')),
+       );
+       return;
+     }
 
-    // Crop the image
-    final croppedFile = await ImageCropper().cropImage(
-      sourcePath: pickedFile.path,
-      compressFormat: ImageCompressFormat.jpg,
-      compressQuality: 85,
-      aspectRatioPresets: [
-        CropAspectRatioPreset.square,
-        CropAspectRatioPreset.original,
-        CropAspectRatioPreset.ratio4x3,
-        CropAspectRatioPreset.ratio16x9,
-      ],
-      uiSettings: [
-        AndroidUiSettings(
-          toolbarTitle: 'Crop Image',
-          toolbarColor: Colors.purple,
-          toolbarWidgetColor: Colors.white,
-          initAspectRatio: CropAspectRatioPreset.original,
-          lockAspectRatio: false,
-        ),
-        IOSUiSettings(
-          title: 'Crop Image',
-        ),
-      ],
-    );
+     final picker = ImagePicker();
+     final pickedFile = await picker.pickImage(source: source);
+     if (pickedFile == null) return;
 
-    if (croppedFile == null) return;
+     // Crop the image
+     final croppedFile = await ImageCropper().cropImage(
+       sourcePath: pickedFile.path,
+       compressFormat: ImageCompressFormat.jpg,
+       compressQuality: 85,
+       aspectRatioPresets: [
+         CropAspectRatioPreset.square,
+         CropAspectRatioPreset.original,
+         CropAspectRatioPreset.ratio4x3,
+         CropAspectRatioPreset.ratio16x9,
+       ],
+       uiSettings: [
+         AndroidUiSettings(
+           toolbarTitle: 'Crop Image',
+           toolbarColor: Colors.purple,
+           toolbarWidgetColor: Colors.white,
+           initAspectRatio: CropAspectRatioPreset.original,
+           lockAspectRatio: false,
+         ),
+         IOSUiSettings(title: 'Crop Image'),
+       ],
+     );
 
-    final authService = AuthServices();
-    final imageUrl = await authService.uploadProfileImage(File(croppedFile.path));
-    if (imageUrl != null) {
-      setState(() {
-        profileImageUrl = imageUrl;
-      });
-    }
-  }
+     if (croppedFile == null) return;
+
+     final authService = AuthServices();
+     final imageUrl = await authService.uploadProfileImage(File(croppedFile.path));
+     if (imageUrl != null) {
+       setState(() {
+         profileImageUrl = imageUrl;
+       });
+     }
+   }
+
 
 
   }

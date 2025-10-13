@@ -182,7 +182,33 @@ class CampaignService {
       return [];
     }
   }
+  /// Fetch influencer campaigns by type (ongoing, requested, completed)
+  Future<List<Map<String, dynamic>>> getInfluencerCampaigns(String type) async {
+    try {
+      final prefs = await SharedPreferences.getInstance();
+      final token = prefs.getString('token');
 
+      final response = await _dio.get(
+        '/influencer/getInfluencerCampaigns',
+        queryParameters: {
+          'type': type, // ongoing | requested | completed
+        },
+        options: Options(headers: {
+          'Authorization': 'Bearer $token',
+        }),
+      );
+
+      if (response.statusCode == 200 && response.data['success'] == true) {
+        return List<Map<String, dynamic>>.from(response.data['campaigns'] ?? []);
+      } else {
+        debugPrint('No campaigns found for type: $type');
+        return [];
+      }
+    } catch (e) {
+      debugPrint("Error fetching $type campaigns: $e");
+      return [];
+    }
+  }
 
   Future<Map<String, dynamic>> sendCampaignRequest(Map<String, dynamic> payload) async {
     final prefs = await SharedPreferences.getInstance();
@@ -235,6 +261,33 @@ class CampaignService {
     } catch (e) {
       print('Error opening chat: $e');
       return null;
+    }
+  }
+  Future<List<Map<String, dynamic>>> getChatList() async {
+    final prefs = await SharedPreferences.getInstance();
+    final token = prefs.getString('token');
+    if (token == null) throw Exception('No auth token found!');
+
+    try {
+      final response = await _dio.get(
+        'chat/getChatList',
+        options: Options(headers: {
+          'Authorization': 'Bearer $token',
+          'Content-Type': Headers.jsonContentType,
+        }),
+      );
+
+      if (response.statusCode == 200 &&
+          response.data['success'] == true &&
+          response.data['chats'] != null) {
+        return List<Map<String, dynamic>>.from(response.data['chats']);
+      } else {
+        print('⚠️ Chat list fetch failed: ${response.data}');
+        return [];
+      }
+    } catch (e) {
+      print('❌ Error fetching chat list: $e');
+      return [];
     }
   }
 

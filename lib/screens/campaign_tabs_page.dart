@@ -1,9 +1,7 @@
 import 'package:flutter/material.dart';
-
 import 'ongoing_campaigns_page.dart';
-
-// Import your campaign card widget
-
+import 'requested_campaigns_page.dart';
+import 'completed_campaigns_page.dart';
 
 class CampaignTabTogglePage extends StatefulWidget {
   const CampaignTabTogglePage({super.key});
@@ -13,29 +11,17 @@ class CampaignTabTogglePage extends StatefulWidget {
 }
 
 class _CampaignTabTogglePageState extends State<CampaignTabTogglePage> {
-  // Reordered tabs
-  final List<String> tabs = ["Ongoing", "Completed", "Saved"];
+  final List<String> tabs = ["Ongoing", "Requested", "Completed"];
   int selectedIndex = 0;
   final PageController _pageController = PageController();
 
   void onTabSelected(int index) {
     setState(() => selectedIndex = index);
-
-    if (tabs[index] == "Ongoing") {
-      // Navigate to new page instead of PageView
-      Navigator.push(
-        context,
-        MaterialPageRoute(
-          builder: (_) => const OnGoingCampaignPage(),
-        ),
-      );
-    } else {
-      _pageController.animateToPage(
-        index,
-        duration: const Duration(milliseconds: 300),
-        curve: Curves.easeInOut,
-      );
-    }
+    _pageController.animateToPage(
+      index,
+      duration: const Duration(milliseconds: 300),
+      curve: Curves.easeInOut,
+    );
   }
 
   @override
@@ -53,7 +39,7 @@ class _CampaignTabTogglePageState extends State<CampaignTabTogglePage> {
           children: [
             const SizedBox(height: 20),
 
-            // Toggle pill tabs with elevation
+            // 🔘 Toggle pill tabs
             Padding(
               padding: const EdgeInsets.symmetric(horizontal: 16),
               child: Container(
@@ -69,11 +55,13 @@ class _CampaignTabTogglePageState extends State<CampaignTabTogglePage> {
                       child: GestureDetector(
                         onTap: () => onTabSelected(index),
                         child: AnimatedContainer(
-                          duration: const Duration(milliseconds: 200),
+                          duration: const Duration(milliseconds: 250),
                           margin: const EdgeInsets.all(4),
                           decoration: BoxDecoration(
                             borderRadius: BorderRadius.circular(30),
-                            color: isSelected ? Colors.white : Colors.transparent,
+                            color: isSelected
+                                ? Colors.white
+                                : Colors.transparent,
                             boxShadow: isSelected
                                 ? [
                               BoxShadow(
@@ -88,7 +76,9 @@ class _CampaignTabTogglePageState extends State<CampaignTabTogglePage> {
                             child: Text(
                               tabs[index],
                               style: TextStyle(
-                                color: isSelected ? Colors.black : Colors.grey,
+                                color: isSelected
+                                    ? Colors.black
+                                    : Colors.grey,
                                 fontWeight: isSelected
                                     ? FontWeight.bold
                                     : FontWeight.normal,
@@ -105,7 +95,7 @@ class _CampaignTabTogglePageState extends State<CampaignTabTogglePage> {
 
             const SizedBox(height: 20),
 
-            // Scrollable content synced with tabs
+            // 🔄 Page View for tabs
             Expanded(
               child: PageView(
                 controller: _pageController,
@@ -113,14 +103,9 @@ class _CampaignTabTogglePageState extends State<CampaignTabTogglePage> {
                   setState(() => selectedIndex = index);
                 },
                 children: const [
-                  // Ongoing handled separately, so keep placeholder
-                  Center(child: Text("Open Ongoing Page →")),
-
-                  // Completed Campaigns
-                  Center(child: Text("Completed Campaigns")),
-
-                  // Saved Campaigns
-                  Center(child: Text("Saved Campaigns")),
+                  OnGoingCampaignPage(),
+                  RequestedCampaignPage(),
+                  CompletedCampaignPage(),
                 ],
               ),
             ),

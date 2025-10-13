@@ -37,8 +37,11 @@ class _BillingAddressPageState extends State<BillingAddressPage> {
 
     stateOptions = states.map((e) => e['name'] as String).toList();
 
-    final address = profile?['profileData']['billingAddresses']?[0];
-    if (address != null) {
+    final billingAddresses = profile?['profileData']?['billingAddresses'];
+
+    if (billingAddresses != null && billingAddresses.isNotEmpty) {
+      final address = billingAddresses[0];
+
       _nameController.text = address['name'] ?? '';
       _address1Controller.text = address['address1'] ?? '';
       _address2Controller.text = address['address2'] ?? '';
@@ -47,14 +50,22 @@ class _BillingAddressPageState extends State<BillingAddressPage> {
       _state = address['state'];
       _city = address['city'];
 
-      if (_state != null) {
-        final stateObj = states.firstWhere((e) => e['name'] == _state, orElse: () => {});
+      if (_state != null && states.isNotEmpty) {
+        final stateObj = states.firstWhere(
+              (e) => e['name'] == _state,
+          orElse: () => {},
+        );
+
         if (stateObj.isNotEmpty) {
           final cities = await LocationServices().fetchCities(stateObj['iso2']);
           cityOptions = cities.map((e) => e['name'] as String).toList();
         }
       }
+    } else {
+      // handle case where no billing address exists
+      debugPrint("No billing address found in profile");
     }
+
 
     setState(() => loading = false);
   }

@@ -480,15 +480,28 @@ class _CampaignViewPageState extends State<CampaignViewPage> {
 
                 if (context.mounted) {
                   Navigator.pop(context); // close bottom sheet
-                  _showResponseDialog(
-                    title: response['status'] == true
-                        ? "Campaign Request Sent!"
-                        : "Request Failed",
-                    description: response['message'] ??
-                        "Something went wrong. Please try again.",
-                    isSuccess: response['status'] == true,
-                  );
+
+                  if (response['status'] == true) {
+                    // ✅ Show success dialog
+                    _showResponseDialog(
+                      title: "Campaign Request Sent!",
+                      description: response['message'] ?? "Your request has been submitted successfully.",
+                      isSuccess: true,
+                    );
+
+                    // ✅ After closing dialog, refresh campaign data
+                    await Future.delayed(const Duration(milliseconds: 500));
+                    if (mounted) _loadCampaign(); // refresh campaign info
+                  } else {
+                    // ❌ Failed response
+                    _showResponseDialog(
+                      title: "Request Failed",
+                      description: response['message'] ?? "Something went wrong. Please try again.",
+                      isSuccess: false,
+                    );
+                  }
                 }
+
               } on DioException catch (dioError) {
                 Navigator.pop(context);
                 final message = dioError.response?.data?['message'] ??
@@ -1070,18 +1083,63 @@ class _CampaignViewPageState extends State<CampaignViewPage> {
                 onPressed: () async {
                   try {
                     final response = await AuthServices().getProfile();
-                    final completion = response?['profileCompletionPercentage'];
-                    if (completion == 100) {
-                      _showPitchBottomSheet(context, campaign!['campaignName']);
-                    } else {
+
+                    final profileData = response?['profileData'];
+                    final completion = response?['profileCompletionPercentage'] ?? 0;
+                    final isVerified = profileData?['isVerified'] ?? false;
+                    final socials = (profileData?['socials'] as List?) ?? [];
+
+                    // ✅ Validation conditions
+                    if (completion < 100) {
                       ScaffoldMessenger.of(context).showSnackBar(
-                        const SnackBar(content: Text("Please complete your profile before requesting")),
+                        const SnackBar(
+                          content: Text("Please complete your profile before requesting."),
+                        ),
                       );
+                      return;
                     }
+
+                    if (!isVerified) {
+                      ScaffoldMessenger.of(context).showSnackBar(
+                        const SnackBar(
+                          content: Text("Your profile is not verified yet."),
+                        ),
+                      );
+                      return;
+                    }
+
+                    if (socials.isEmpty) {
+                      ScaffoldMessenger.of(context).showSnackBar(
+                        const SnackBar(
+                          content: Text("Please connect at least one social account."),
+                        ),
+                      );
+                      return;
+                    }
+
+                    // ✅ Check if influencer already requested this campaign
+                    final requests = List<Map<String, dynamic>>.from(campaign?['requests'] ?? []);
+                    final hasRequested = requests.any((req) =>
+                    req['influencer'] == _influencerId &&
+                        (req['influencerStatus'] ?? '').toLowerCase() == 'requested');
+
+                    if (hasRequested) {
+                      ScaffoldMessenger.of(context).showSnackBar(
+                        const SnackBar(
+                          content: Text("You have already requested this campaign."),
+                        ),
+                      );
+                      return;
+                    }
+
+                    // ✅ All conditions met — open pitch bottom sheet
+                    _showPitchBottomSheet(context, campaign!['campaignName']);
                   } catch (e) {
                     debugPrint("Error fetching profile: $e");
                     ScaffoldMessenger.of(context).showSnackBar(
-                      const SnackBar(content: Text("Something went wrong. Please try again.")),
+                      const SnackBar(
+                        content: Text("Something went wrong. Please try again."),
+                      ),
                     );
                   }
                 },
@@ -1092,9 +1150,38 @@ class _CampaignViewPageState extends State<CampaignViewPage> {
                     borderRadius: BorderRadius.circular(30),
                   ),
                 ),
-                child: const Text("Request Campaign", style: TextStyle(color: Colors.white)),
+                child: const Text(
+                  "Request Campaign",
+                  style: TextStyle(color: Colors.white),
+                ),
               ),
             ]
+            else if (campaign?['requests'] != null &&
+                  campaign!['requests'].any((req) =>
+                  req['influencer'] == _influencerId &&
+                      (req['influencerStatus'] ?? '').toLowerCase() == 'requested')) ...[
+                // ✅ If already requested, show a message instead of button
+                Container(
+                  width: double.infinity,
+                  padding: const EdgeInsets.symmetric(vertical: 14, horizontal: 12),
+                  decoration: BoxDecoration(
+                    color: Colors.grey[100],
+                    borderRadius: BorderRadius.circular(30),
+                    border: Border.all(color: Colors.grey.shade300),
+                  ),
+                  child: const Center(
+                    child: Text(
+                      "You have already requested this campaign",
+                      style: TextStyle(
+                        color: Colors.black87,
+                        fontWeight: FontWeight.w500,
+                      ),
+                    ),
+                  ),
+                ),
+              ]
+
+
           ],
         ),
       ),

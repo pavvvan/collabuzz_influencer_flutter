@@ -24,7 +24,8 @@ class _HomeScreenState extends State<HomeScreen> {
   final List<String> banners = [
     //'assets/home_card_1.png',
     'assets/banner2.png',
-    'assets/banner3.png',
+    'assets/banner4.png',
+    'assets/banner2.png',
     'assets/banner4.png',
   ];
 

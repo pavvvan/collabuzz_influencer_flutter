@@ -1,8 +1,9 @@
 import 'package:flutter/material.dart';
+import '../../widgets/campaign_card.dart';
+import '../../widgets/empty_campaign_placeholder.dart';
 import '../services/dart/campaign_service.dart';
-import '../widgets/campaign_card.dart';
-import 'campaign_view_page.dart';
 
+import 'campaign_view_page.dart'; // ✅ import your detail screen
 
 class OnGoingCampaignPage extends StatefulWidget {
   const OnGoingCampaignPage({super.key});
@@ -12,50 +13,59 @@ class OnGoingCampaignPage extends StatefulWidget {
 }
 
 class _OnGoingCampaignPageState extends State<OnGoingCampaignPage> {
-  final CampaignService _campaignService = CampaignService();
-  List<dynamic> _campaigns = [];
-  bool _isLoading = true;
+  bool isLoading = true;
+  List<Map<String, dynamic>> campaigns = [];
 
   @override
   void initState() {
     super.initState();
-    _fetchAwardedCampaigns();
+    _fetchCampaigns();
   }
 
-  Future<void> _fetchAwardedCampaigns() async {
-    final campaigns = await _campaignService.getAwardedCampaigns();
+  Future<void> _fetchCampaigns() async {
+    final service = CampaignService();
+    final result = await service.getInfluencerCampaigns("ongoing");
     setState(() {
-      _campaigns = campaigns;
-      _isLoading = false;
+      campaigns = result;
+      isLoading = false;
     });
   }
 
   @override
   Widget build(BuildContext context) {
-    return Scaffold(
-      backgroundColor: Colors.white,
-      body: _isLoading
-          ? const Center(child: CircularProgressIndicator())
-          : _campaigns.isEmpty
-          ? const Center(child: Text("No awarded campaigns found"))
-          : ListView.builder(
-        itemCount: _campaigns.length,
-        itemBuilder: (context, index) {
-          final campaign = _campaigns[index];
-          return CampaignCard(
-            campaign: campaign,
-            onTap: () {
-              Navigator.push(
-                context,
-                MaterialPageRoute(
-                  builder: (_) => CampaignViewPage(campaignId: campaign['_id']),
-                ),
-              );
-            },
-          );
-        },
+    return RefreshIndicator(
+      onRefresh: _fetchCampaigns,
+      child: Scaffold(
+        backgroundColor: Colors.white,
+        body: isLoading
+            ? const Center(child: CircularProgressIndicator())
+            : campaigns.isEmpty
+            ? const EmptyCampaignPlaceholder(
+          icon: Icons.campaign_outlined,
+          title: "Ongoing Campaigns",
+          subtitle: "All your live campaigns appear here.",
+        )
+            : ListView.builder(
+          padding: const EdgeInsets.all(16),
+          itemCount: campaigns.length,
+          itemBuilder: (context, index) {
+            final campaign = campaigns[index];
+            return CampaignCard(
+              campaign: campaign,
+              onTap: () {
+                Navigator.push(
+                  context,
+                  MaterialPageRoute(
+                    builder: (_) => CampaignViewPage(
+                      campaignId: campaign['_id'],
+                    ),
+                  ),
+                );
+              },
+            );
+          },
+        ),
       ),
     );
   }
 }
-

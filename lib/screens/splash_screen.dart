@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'package:influencer_dashboard/screens/auth/login_screen.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 import 'dashboard_screen.dart';
 import 'welcome_screen.dart';
@@ -40,7 +41,7 @@ class _SplashScreenState extends State<SplashScreen> {
     } else {
       Navigator.pushReplacement(
         context,
-        MaterialPageRoute(builder: (_) => WelcomeScreen()),
+        MaterialPageRoute(builder: (_) => LoginScreen()),
       );
     }
   }
