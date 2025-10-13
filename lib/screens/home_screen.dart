@@ -23,10 +23,12 @@ class _HomeScreenState extends State<HomeScreen> {
 
   final List<String> banners = [
     //'assets/home_card_1.png',
-    'assets/banner2.png',
-    'assets/banner4.png',
-    'assets/banner2.png',
-    'assets/banner4.png',
+    'assets/banner5.png',
+    'assets/banner6.png',
+    'assets/banner11.png',
+    // 'assets/banner2.png',
+    // 'assets/banner4.png',
+
   ];
 
   @override

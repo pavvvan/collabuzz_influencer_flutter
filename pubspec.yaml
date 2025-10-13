@@ -2,7 +2,6 @@ name: influencer_dashboard
 
 description: "Direct Brand Collabs. Find, pitch, and manage paid influencer campaigns. Get matched and get paid faster."
 
-
 version: 1.0.0+1
 
 environment:
@@ -52,9 +51,13 @@ flutter:
     - assets/placeholder.png
     - assets/avatar.png
     - assets/home_card_1.png
+
+    - assets/banner11.png
     - assets/banner2.png
     - assets/banner3.png
     - assets/banner4.png
+    - assets/banner5.png
+    - assets/banner6.png
 
   fonts:
     - family: Nunito
