@@ -107,10 +107,24 @@ class _CampaignWorkflowPageState extends State<CampaignWorkflowPage> {
       );
     }).toList();
 
-    final completedCount = items
-        .where((it) => it.status == 'completed' || it.status == 'submitted' || it.status == 'acknowledged')
-        .length;
+    // ✅ Count all milestones that are "done"
+    final completedCount = items.where((it) {
+      final status = it.status.toLowerCase();
+      return [
+        'approved',
+        'completed',
+        'submitted',
+        'acknowledged',
+        'accepted'
+      ].contains(status);
+    }).length;
+
+// ✅ Progress = completed ratio (0 to 1)
     final prog = items.isEmpty ? 0.0 : (completedCount / items.length);
+
+// Optional: clamp to avoid weird values
+    final safeProgress = prog.clamp(0.0, 1.0);
+
 
     setState(() {
       _campaign = campaign;
@@ -671,10 +685,11 @@ class _CampaignWorkflowPageState extends State<CampaignWorkflowPage> {
       }
       return 'Upload your draft for brand review.';
     }
-
+    print("ttttt $t");
     if (t.contains('post')) return 'Upload link to your live content.';
     if (t.contains('analytics')) return 'Submit analytics for review.';
     if (t.contains('barter')) return 'Barter fulfilled.';
+    if (t.contains('payment release')) return 'Campaign fulfilled wait for payment release.';
 
     return 'Complete this milestone.';
   }
