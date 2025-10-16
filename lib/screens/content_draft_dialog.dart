@@ -26,156 +26,230 @@ class _ContentDraftDialogState extends State<ContentDraftDialog> {
   @override
   Widget build(BuildContext context) {
     return Dialog(
-      shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
+      backgroundColor: Colors.transparent, // Transparent background for depth
       insetPadding: const EdgeInsets.all(16),
-      child: Column(
-        mainAxisSize: MainAxisSize.min,
-        children: [
-          // 🔹 Purple Header with Close Button
-          Container(
-            decoration: const BoxDecoration(
-              color: Colors.deepPurple,
-              borderRadius: BorderRadius.vertical(top: Radius.circular(16)),
-            ),
-            padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
-            child: Row(
-              children: [
-                const Text(
-                  "Content Drafts",
-                  style: TextStyle(
-                      color: Colors.white,
-                      fontSize: 18,
-                      fontWeight: FontWeight.bold),
-                ),
-                const Spacer(),
-                IconButton(
-                  icon: const Icon(Icons.close, color: Colors.white),
-                  onPressed: () => Navigator.pop(context),
-                ),
-              ],
-            ),
-          ),
-
-          // 🔹 White Content Area
-          Container(
+      child: GestureDetector(
+        onTap: () => FocusScope.of(context).unfocus(), // dismiss keyboard on tap outside
+        child: Container(
+          decoration: BoxDecoration(
             color: Colors.white,
-            padding: const EdgeInsets.all(16),
-            constraints: const BoxConstraints(maxHeight: 500),
-            child: Column(
-              mainAxisSize: MainAxisSize.min,
-              crossAxisAlignment: CrossAxisAlignment.start,
-              children: [
-                // Existing drafts list
-                // Existing drafts list
-                if (widget.existingDrafts.isNotEmpty)
-                  Expanded(
-                    child: ListView.builder(
-                      itemCount: widget.existingDrafts.reversed.length,
-                      itemBuilder: (context, i) {
-                        final d = widget.existingDrafts.reversed.toList()[i];
-                        return Card(
-                          margin: const EdgeInsets.only(bottom: 10),
-                          child: ListTile(
-                            leading: const Icon(Icons.description,
-                                color: Colors.deepPurple),
-                            title: Text(d['notes'] ?? ''),
-                            subtitle: Column(
-                              crossAxisAlignment: CrossAxisAlignment.start,
-                              children: [
-                                if (d['url'] != null && d['url'].toString().isNotEmpty)
-                                  GestureDetector(
-                                    onTap: () async {
-                                      final raw = d['url'].toString();
-                                      final normalized = _normalizeUrl(raw);
-                                      final uri = Uri.parse(normalized);
-
-                                      if (await canLaunchUrl(uri)) {
-                                        await launchUrl(uri,
-                                            mode: LaunchMode.externalApplication);
-                                      } else {
-                                        ScaffoldMessenger.of(context).showSnackBar(
-                                          SnackBar(content: Text("Could not open $normalized")),
-                                        );
-                                      }
-                                    },
-                                    child: Text(
-                                      d['url'],
-                                      style: const TextStyle(
-                                        color: Colors.blue,
-                                        decoration: TextDecoration.underline,
-                                      ),
-                                    ),
-                                  ),
-                                if (d['createdAt'] != null)
-                                  Text(
-                                    "Uploaded on ${_formatDate(d['createdAt'])}",
-                                    style: const TextStyle(
-                                        fontSize: 12, color: Colors.black54),
-                                  ),
-                              ],
-                            ),
-                          ),
-                        );
-                      },
-                    ),
-                  )
-                else
-                  const Text("No drafts uploaded yet.",
-                      style: TextStyle(color: Colors.black54)),
-
-                const SizedBox(height: 16),
-                const Divider(),
-
-                // Upload new draft form
-                const Text("Upload New Draft",
-                    style:
-                    TextStyle(fontWeight: FontWeight.w600, fontSize: 15)),
-                const SizedBox(height: 8),
-                TextField(
-                  controller: descController,
-                  decoration: const InputDecoration(
-                    labelText: "Description",
-                    border: OutlineInputBorder(),
-                  ),
+            borderRadius: BorderRadius.circular(20),
+            boxShadow: [
+              BoxShadow(
+                color: Colors.black12,
+                blurRadius: 10,
+                offset: const Offset(0, 4),
+              ),
+            ],
+          ),
+          child: Column(
+            mainAxisSize: MainAxisSize.min,
+            children: [
+              // 🔹 Header
+              Container(
+                decoration: const BoxDecoration(
+                  color: Colors.deepPurple,
+                  borderRadius: BorderRadius.vertical(top: Radius.circular(20)),
                 ),
-                const SizedBox(height: 10),
-                TextField(
-                  controller: linkController,
-                  decoration: const InputDecoration(
-                    labelText: "Content Link (image/video)",
-                    border: OutlineInputBorder(),
-                  ),
-                ),
-                const SizedBox(height: 14),
-
-                // Action buttons
-                Row(
+                padding:
+                const EdgeInsets.symmetric(horizontal: 20, vertical: 14),
+                child: Row(
                   children: [
-                    Expanded(
-                      child: ElevatedButton(
-                        onPressed: _loading ? null : _uploadDraft,
-                        style: ElevatedButton.styleFrom(
-                          backgroundColor: Colors.deepPurple,
-                          shape: RoundedRectangleBorder(
+                    const Text(
+                      "Content Drafts",
+                      style: TextStyle(
+                          color: Colors.white,
+                          fontSize: 18,
+                          fontWeight: FontWeight.bold),
+                    ),
+                    const Spacer(),
+                    IconButton(
+                      icon: const Icon(Icons.close, color: Colors.white),
+                      onPressed: () => Navigator.pop(context),
+                    ),
+                  ],
+                ),
+              ),
+
+              // 🔹 Body
+              Flexible(
+                child: SingleChildScrollView(
+                  padding: EdgeInsets.only(
+                    bottom: MediaQuery.of(context).viewInsets.bottom + 16,
+                    left: 20,
+                    right: 20,
+                    top: 16,
+                  ),
+                  physics: const BouncingScrollPhysics(),
+                  child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      // Existing Drafts
+                      if (widget.existingDrafts.isNotEmpty)
+                        ListView.builder(
+                          shrinkWrap: true,
+                          physics: const NeverScrollableScrollPhysics(),
+                          itemCount: widget.existingDrafts.reversed.length,
+                          itemBuilder: (context, i) {
+                            final d =
+                            widget.existingDrafts.reversed.toList()[i];
+                            return Container(
+                              margin: const EdgeInsets.only(bottom: 12),
+                              decoration: BoxDecoration(
+                                color: Colors.white,
+                                borderRadius: BorderRadius.circular(16),
+                                boxShadow: [
+                                  BoxShadow(
+                                    color: Colors.grey.withOpacity(0.15),
+                                    blurRadius: 6,
+                                    offset: const Offset(0, 3),
+                                  ),
+                                ],
+                              ),
+                              child: ListTile(
+                                contentPadding: const EdgeInsets.all(12),
+                                leading: CircleAvatar(
+                                  radius: 22,
+                                  backgroundColor:
+                                  Colors.deepPurple.withOpacity(0.1),
+                                  child: const Icon(Icons.description,
+                                      color: Colors.deepPurple),
+                                ),
+                                title: Text(
+                                  d['notes'] ?? '',
+                                  style: const TextStyle(
+                                      fontWeight: FontWeight.w600,
+                                      color: Colors.black87),
+                                ),
+                                subtitle: Column(
+                                  crossAxisAlignment: CrossAxisAlignment.start,
+                                  children: [
+                                    if (d['url'] != null &&
+                                        d['url'].toString().isNotEmpty)
+                                      Padding(
+                                        padding: const EdgeInsets.only(top: 4),
+                                        child: GestureDetector(
+                                          onTap: () async {
+                                            final raw = d['url'].toString();
+                                            final normalized = _normalizeUrl(raw);
+                                            final uri = Uri.parse(normalized);
+                                            if (await canLaunchUrl(uri)) {
+                                              await launchUrl(uri,
+                                                  mode: LaunchMode
+                                                      .externalApplication);
+                                            } else {
+                                              ScaffoldMessenger.of(context)
+                                                  .showSnackBar(SnackBar(
+                                                  content: Text(
+                                                      "Could not open $normalized")));
+                                            }
+                                          },
+                                          child: Text(
+                                            d['url'],
+                                            style: const TextStyle(
+                                              color: Colors.blue,
+                                              decoration:
+                                              TextDecoration.underline,
+                                            ),
+                                          ),
+                                        ),
+                                      ),
+                                    if (d['createdAt'] != null)
+                                      Padding(
+                                        padding: const EdgeInsets.only(top: 4),
+                                        child: Text(
+                                          "Uploaded on ${_formatDate(d['createdAt'])}",
+                                          style: const TextStyle(
+                                              fontSize: 12,
+                                              color: Colors.black54),
+                                        ),
+                                      ),
+                                  ],
+                                ),
+                              ),
+                            );
+                          },
+                        )
+                      else
+                        const Padding(
+                          padding: EdgeInsets.symmetric(vertical: 8.0),
+                          child: Text(
+                            "No drafts uploaded yet.",
+                            style: TextStyle(color: Colors.black54),
+                          ),
+                        ),
+
+                      const SizedBox(height: 20),
+                      const Divider(thickness: 1),
+                      const SizedBox(height: 12),
+
+                      // Upload Form
+                      const Text(
+                        "Upload New Draft",
+                        style: TextStyle(
+                            fontWeight: FontWeight.w700, fontSize: 16),
+                      ),
+                      const SizedBox(height: 12),
+
+                      TextField(
+                        controller: descController,
+                        decoration: InputDecoration(
+                          labelText: "Description",
+                          filled: true,
+                          fillColor: Colors.grey[100],
+                          border: OutlineInputBorder(
                             borderRadius: BorderRadius.circular(12),
                           ),
                         ),
-                        child: _loading
-                            ? const CircularProgressIndicator(
-                            color: Colors.white, strokeWidth: 2)
-                            : const Text("Upload Draft",
-                            style: TextStyle(color: Colors.white)),
                       ),
-                    ),
-                  ],
-                )
-              ],
-            ),
+                      const SizedBox(height: 10),
+                      TextField(
+                        controller: linkController,
+                        decoration: InputDecoration(
+                          labelText: "Content Link (image/video)",
+                          filled: true,
+                          fillColor: Colors.grey[100],
+                          border: OutlineInputBorder(
+                            borderRadius: BorderRadius.circular(12),
+                          ),
+                        ),
+                      ),
+                      const SizedBox(height: 20),
+
+                      SizedBox(
+                        width: double.infinity,
+                        child: ElevatedButton(
+                          onPressed: _loading ? null : _uploadDraft,
+                          style: ElevatedButton.styleFrom(
+                            backgroundColor: Colors.deepPurple,
+                            shape: RoundedRectangleBorder(
+                                borderRadius: BorderRadius.circular(14)),
+                            padding: const EdgeInsets.symmetric(vertical: 14),
+                          ),
+                          child: _loading
+                              ? const SizedBox(
+                            height: 20,
+                            width: 20,
+                            child: CircularProgressIndicator(
+                                color: Colors.white, strokeWidth: 2),
+                          )
+                              : const Text("Upload Draft",
+                              style: TextStyle(
+                                  color: Colors.white,
+                                  fontWeight: FontWeight.bold)),
+                        ),
+                      ),
+                    ],
+                  ),
+                ),
+              ),
+            ],
           ),
-        ],
+        ),
       ),
     );
   }
+
 
   Future<void> _uploadDraft() async {
     if (descController.text.isEmpty || linkController.text.isEmpty) {

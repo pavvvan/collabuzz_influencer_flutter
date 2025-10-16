@@ -783,74 +783,80 @@ class _CampaignWorkflowPageState extends State<CampaignWorkflowPage> {
 
 
   Widget _milestoneTimelineTile(MilestoneItem item, bool isLast) {
-    final isDone = item.status == 'submitted' || item.status == 'completed' || item.status == 'accepted' || item.status == 'acknowledged';
+    // Helper: determine if a milestone is considered "done"
+    bool isApprovedOrDone(MilestoneItem m) {
+      final key = m.key;
+      final status = m.status.toLowerCase();
+      if (key == 'contract') return true; // ignore contract from lock flow
+      if (key == 'brief_ack') return true; // always considered submitted
+      return status == 'approved';
+    }
+
+    // Find the index of this milestone
+    final index = _milestones.indexOf(item);
+
+    // Determine if previous milestone is approved (or brief_ack)
+    bool previousApproved = true; // default true for first items
+    if (index > 0) {
+      final prev = _milestones[index - 1];
+      previousApproved = isApprovedOrDone(prev);
+    }
+
+    // Determine if this milestone is locked
+    final isLocked = item.key != 'contract' && !previousApproved;
+
+    final isDone = [
+      'approved',
+      'completed',
+      'accepted',
+      'acknowledged',
+      'submitted'
+    ].contains(item.status.toLowerCase());
+
     final isPending = item.status == 'pending';
+    final isCurrent = !isLocked && isPending;
 
     IconData icon;
     Color iconColor;
-    String subtitle = _milestoneSubtitle(item);
 
-    if (item.key == 'contract') {
-      icon = Icons.description;
-    } else if (item.key == 'brief_ack') {
-      icon = Icons.assignment_turned_in;
-    } else if (item.key == 'draft') {
-      icon = Icons.edit_document;
-    } else if (item.key == 'post_live') {
-      icon = Icons.public;
-    } else if (item.key == 'analytics') {
-      icon = Icons.bar_chart;
-    } else {
-      icon = Icons.check_circle_outline;
+    // Choose icon based on milestone key
+    switch (item.key) {
+      case 'contract':
+        icon = Icons.description;
+        break;
+      case 'brief_ack':
+        icon = Icons.assignment_turned_in;
+        break;
+      case 'draft':
+        icon = Icons.edit_document;
+        break;
+      case 'post_live':
+        icon = Icons.public;
+        break;
+      case 'analytics':
+        icon = Icons.bar_chart;
+        break;
+      default:
+        icon = Icons.check_circle_outline;
     }
 
-    if (isDone) {
+    // Color logic
+    if (isLocked) {
+      iconColor = Colors.grey.shade400;
+    } else if (isDone) {
       iconColor = Colors.green;
-
-      if (item.key == 'draft') {
-        // 🔹 Find last submitted draft date
-        final awarded = (_campaign?['awardedInfluencers'] as List<dynamic>?) ?? [];
-        final myAward = awarded.cast<Map<String, dynamic>?>().firstWhere(
-              (a) => (a?['influencer']?.toString() ?? '') == widget.influencerId,
-          orElse: () => null,
-        );
-
-        if (myAward != null) {
-          final milestones = myAward['milestones'] ?? [];
-          final draftMilestone = milestones.firstWhere(
-                (m) => m['key'] == 'draft',
-            orElse: () => null,
-          );
-
-          if (draftMilestone != null &&
-              draftMilestone['submitted'] != null &&
-              (draftMilestone['submitted'] as List).isNotEmpty) {
-            final lastDraft =
-            (draftMilestone['submitted'] as List).last as Map<String, dynamic>;
-            final date = lastDraft['createdAt'];
-            subtitle = "Last draft submitted on ${_formatDate(date)}";
-          } else {
-            subtitle = "Draft submitted";
-          }
-        } else {
-          subtitle = "Draft submitted";
-        }
-      } else {
-        // default for others
-        final date = item.dueAt['decidedAt'] ?? _campaign?['updatedAt'];
-        subtitle = "Accepted on ${_formatDate(date)}";
-      }
-    }
-    else if (isPending) {
+    } else if (isPending) {
       iconColor = Colors.orange;
     } else {
       iconColor = Colors.grey;
     }
 
+    final subtitle = _milestoneSubtitle(item);
+
     return Row(
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
-        // Left timeline
+        // Left timeline dots
         Column(
           children: [
             CircleAvatar(
@@ -868,187 +874,87 @@ class _CampaignWorkflowPageState extends State<CampaignWorkflowPage> {
         ),
         const SizedBox(width: 12),
 
-        // Right milestone card with tap handling
+        // Right milestone card
         Expanded(
-          child: GestureDetector(
-            onTap: () async {
-              if (item.key == 'contract') {
-                _showContractDialog(item);
-              } else if (item.key == 'brief_ack') {
-                _showBriefDialog(item);
-              }
-              else if (item.key == 'draft') {
-                // 🔹 Get myAward from awardedInfluencers
-                final awarded = (_campaign?['awardedInfluencers'] as List<dynamic>?) ?? [];
-                final myAward = awarded.cast<Map<String, dynamic>?>().firstWhere(
-                      (a) => (a?['influencer']?.toString() ?? '') == widget.influencerId,
-                  orElse: () => null,
-                );
-
-                // 🔹 Find draft milestone
-                final milestones = myAward?['milestones'] ?? [];
-                final draftMilestone = milestones.firstWhere(
-                      (m) => m['key'] == 'draft',
-                  orElse: () => null,
-                );
-
-                // 🔹 Extract submitted drafts list (safe cast)
-                final drafts = draftMilestone != null
-                    ? (draftMilestone['submitted'] as List<dynamic>)
-                    .map((d) => Map<String, dynamic>.from(d as Map))
-                    .toList()
-                    : <Map<String, dynamic>>[];
-
-                // 🔹 Open dialog
-                final refresh = await showDialog(
-                  context: context,
-                  builder: (_) => ContentDraftDialog(
-                    campaignId: _campaign!['_id'],
-                    milestoneKey: item.key,
-                    existingDrafts: drafts,
-                  ),
-                );
-
-                if (refresh == true) {
-                  _fetchCampaign(); // refresh after upload
+          child: Opacity(
+            opacity: isLocked ? 0.6 : 1.0,
+            child: GestureDetector(
+              onTap: isLocked
+                  ? null
+                  : () async {
+                if (item.key == 'contract') return;
+                if (item.key == 'brief_ack') {
+                  _showBriefDialog(item);
+                } else if (item.key == 'draft') {
+                  await _handleDraftMilestone(item);
+                } else if (item.key == 'post_live') {
+                  await _handlePostMilestone(item);
+                } else if (item.key == 'analytics') {
+                  await _handleAnalyticsMilestone(item);
                 }
-              }
-              else if (item.key == 'post_live') {
-                final awarded = (_campaign?['awardedInfluencers'] as List<dynamic>?) ?? [];
-                final myAward = awarded.cast<Map<String, dynamic>?>().firstWhere(
-                      (a) => (a?['influencer']?.toString() ?? '') == widget.influencerId,
-                  orElse: () => null,
-                );
-
-                final milestones = myAward?['milestones'] ?? [];
-                final postMilestone = milestones.firstWhere(
-                      (m) => m['key'] == 'post_live',
-                  orElse: () => null,
-                );
-
-                final posts = postMilestone != null
-                    ? (postMilestone['submitted'] as List<dynamic>)
-                    .map((d) => Map<String, dynamic>.from(d as Map))
-                    .toList()
-                    : <Map<String, dynamic>>[];
-
-                final refresh = await showDialog(
-                  context: context,
-                  builder: (_) => PostLiveDialog(
-                    campaignId: _campaign!['_id'],
-                    milestoneKey: item.key,
-                    existingPosts: posts,
+              },
+              child: Container(
+                margin: const EdgeInsets.only(bottom: 16),
+                padding: const EdgeInsets.all(12),
+                decoration: BoxDecoration(
+                  color: Colors.white,
+                  borderRadius: BorderRadius.circular(10),
+                  border: Border.all(
+                    color: isLocked
+                        ? Colors.grey.shade300
+                        : (isCurrent
+                        ? Colors.green
+                        : Colors.grey.shade300),
+                    width: 1.2,
                   ),
-                );
-
-                if (refresh == true) {
-                  _fetchCampaign();
-                }
-              }
-
-    else if (item.key == 'post_live') {
-    // 🔹 Get myAward
-    final awarded = (_campaign?['awardedInfluencers'] as List<dynamic>?) ?? [];
-    final myAward = awarded.cast<Map<String, dynamic>?>().firstWhere(
-    (a) => (a?['influencer']?.toString() ?? '') == widget.influencerId,
-    orElse: () => null,
-    );
-
-    final milestones = myAward?['milestones'] ?? [];
-    final postMilestone = milestones.firstWhere(
-    (m) => m['key'] == 'post_live',
-    orElse: () => null,
-    );
-
-    final posts = postMilestone != null
-    ? (postMilestone['submitted'] as List<dynamic>)
-        .map((p) => Map<String, dynamic>.from(p as Map))
-        .toList()
-        : <Map<String, dynamic>>[];
-
-    final refresh = await showDialog(
-    context: context,
-    builder: (_) => PostLiveDialog(
-    campaignId: _campaign!['_id'],
-    milestoneKey: item.key,
-    existingPosts: posts,
-    ),
-    );
-
-    if (refresh == true) _fetchCampaign();
-    }
-
-
-    else if (item.key == 'analytics') {
-
-    // 🔹 Get myAward
-    final awarded = (_campaign?['awardedInfluencers'] as List<dynamic>?) ?? [];
-    final myAward = awarded.cast<Map<String, dynamic>?>().firstWhere(
-    (a) => (a?['influencer']?.toString() ?? '') == widget.influencerId,
-    orElse: () => null,
-    );
-
-    final milestones = myAward?['milestones'] ?? [];
-    final analyticsMilestone = milestones.firstWhere(
-    (m) => m['key'] == 'analytics',
-    orElse: () => null,
-    );
-
-    final analytics = analyticsMilestone != null
-    ? (analyticsMilestone['submitted'] as List<dynamic>)
-        .map((a) => Map<String, dynamic>.from(a as Map))
-        .toList()
-        : <Map<String, dynamic>>[];
-
-    final refresh = await showDialog(
-    context: context,
-    builder: (_) => SubmitAnalyticsDialog(
-    campaignId: _campaign!['_id'],
-    milestoneKey: item.key,
-    existingAnalytics: analytics,
-    ),
-    );
-
-    if (refresh == true) _fetchCampaign();
-    }
-
-
-
-            },
-
-
-            child: Container(
-              margin: const EdgeInsets.only(bottom: 16),
-              padding: const EdgeInsets.all(12),
-              decoration: BoxDecoration(
-                color: Colors.white,
-                borderRadius: BorderRadius.circular(10),
-                border: Border.all(
-                  color: isPending ? Colors.green : Colors.grey.shade300,
-                  width: 1.2,
                 ),
-              ),
-              child: Column(
-                crossAxisAlignment: CrossAxisAlignment.start,
-                children: [
-                  Text(item.title,
-                      style: const TextStyle(
-                          fontWeight: FontWeight.bold, fontSize: 15)),
-                  const SizedBox(height: 6),
-                  Text(subtitle,
-                      style: const TextStyle(color: Colors.black54, fontSize: 13)),
-                  const SizedBox(height: 8),
-                  Container(
-                    padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 6),
-                    decoration: BoxDecoration(
-                      color: Colors.grey[200],
-                      borderRadius: BorderRadius.circular(16),
+                child: Row(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    // Content
+                    Expanded(
+                      child: Column(
+                        crossAxisAlignment: CrossAxisAlignment.start,
+                        children: [
+                          Text(item.title,
+                              style: TextStyle(
+                                fontWeight: FontWeight.bold,
+                                fontSize: 15,
+                                color: isLocked ? Colors.grey : Colors.black,
+                              )),
+                          const SizedBox(height: 6),
+                          Text(
+                            subtitle,
+                            style: TextStyle(
+                              color: isLocked
+                                  ? Colors.grey.shade500
+                                  : Colors.black54,
+                              fontSize: 13,
+                            ),
+                          ),
+                          const SizedBox(height: 8),
+                          Container(
+                            padding: const EdgeInsets.symmetric(
+                                horizontal: 10, vertical: 6),
+                            decoration: BoxDecoration(
+                              color: Colors.grey[200],
+                              borderRadius: BorderRadius.circular(16),
+                            ),
+                            child: Text(
+                              item.status.toUpperCase(),
+                              style: const TextStyle(
+                                  fontSize: 12, fontWeight: FontWeight.w700),
+                            ),
+                          ),
+                        ],
+                      ),
                     ),
-                    child: Text(item.status.toUpperCase(),
-                        style: const TextStyle(
-                            fontSize: 12, fontWeight: FontWeight.w700)),
-                  ),
-                ],
+
+                    // 🔒 Show lock for locked ones
+                    if (isLocked)
+                      const Icon(Icons.lock, color: Colors.grey, size: 20),
+                  ],
+                ),
               ),
             ),
           ),
@@ -1056,6 +962,93 @@ class _CampaignWorkflowPageState extends State<CampaignWorkflowPage> {
       ],
     );
   }
+
+
+
+  Future<void> _handleDraftMilestone(MilestoneItem item) async {
+    final awarded = (_campaign?['awardedInfluencers'] as List<dynamic>?) ?? [];
+    final myAward = awarded.cast<Map<String, dynamic>?>().firstWhere(
+          (a) => (a?['influencer']?.toString() ?? '') == widget.influencerId,
+      orElse: () => null,
+    );
+
+    final milestones = myAward?['milestones'] ?? [];
+    final draftMilestone =
+    milestones.firstWhere((m) => m['key'] == 'draft', orElse: () => null);
+    final drafts = draftMilestone != null
+        ? (draftMilestone['submitted'] as List<dynamic>)
+        .map((d) => Map<String, dynamic>.from(d as Map))
+        .toList()
+        : <Map<String, dynamic>>[];
+
+    final refresh = await showDialog(
+      context: context,
+      builder: (_) => ContentDraftDialog(
+        campaignId: _campaign!['_id'],
+        milestoneKey: item.key,
+        existingDrafts: drafts,
+      ),
+    );
+
+    if (refresh == true) _fetchCampaign();
+  }
+
+  Future<void> _handlePostMilestone(MilestoneItem item) async {
+    final awarded = (_campaign?['awardedInfluencers'] as List<dynamic>?) ?? [];
+    final myAward = awarded.cast<Map<String, dynamic>?>().firstWhere(
+          (a) => (a?['influencer']?.toString() ?? '') == widget.influencerId,
+      orElse: () => null,
+    );
+
+    final milestones = myAward?['milestones'] ?? [];
+    final postMilestone =
+    milestones.firstWhere((m) => m['key'] == 'post_live', orElse: () => null);
+    final posts = postMilestone != null
+        ? (postMilestone['submitted'] as List<dynamic>)
+        .map((d) => Map<String, dynamic>.from(d as Map))
+        .toList()
+        : <Map<String, dynamic>>[];
+
+    final refresh = await showDialog(
+      context: context,
+      builder: (_) => PostLiveDialog(
+        campaignId: _campaign!['_id'],
+        milestoneKey: item.key,
+        existingPosts: posts,
+      ),
+    );
+
+    if (refresh == true) _fetchCampaign();
+  }
+
+  Future<void> _handleAnalyticsMilestone(MilestoneItem item) async {
+    final awarded = (_campaign?['awardedInfluencers'] as List<dynamic>?) ?? [];
+    final myAward = awarded.cast<Map<String, dynamic>?>().firstWhere(
+          (a) => (a?['influencer']?.toString() ?? '') == widget.influencerId,
+      orElse: () => null,
+    );
+
+    final milestones = myAward?['milestones'] ?? [];
+    final analyticsMilestone =
+    milestones.firstWhere((m) => m['key'] == 'analytics', orElse: () => null);
+    final analytics = analyticsMilestone != null
+        ? (analyticsMilestone['submitted'] as List<dynamic>)
+        .map((a) => Map<String, dynamic>.from(a as Map))
+        .toList()
+        : <Map<String, dynamic>>[];
+
+    final refresh = await showDialog(
+      context: context,
+      builder: (_) => SubmitAnalyticsDialog(
+        campaignId: _campaign!['_id'],
+        milestoneKey: item.key,
+        existingAnalytics: analytics,
+      ),
+    );
+
+    if (refresh == true) _fetchCampaign();
+  }
+
 
 
 
