@@ -1,6 +1,7 @@
 import 'dart:convert';
 
 import 'package:flutter/material.dart';
+import 'package:flutter/services.dart';
 import 'package:photo_view/photo_view.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 import '../services/dart/auth_services.dart';
@@ -277,12 +278,25 @@ class _CampaignViewPageState extends State<CampaignViewPage> {
               onTap: () => _showFullTextDialog(title, value),
               child: Padding(
                 padding: const EdgeInsets.only(top: 6),
-                child: Text(
-                  "Read more",
-                  style: TextStyle(
-                    color: const Color(0xFF671DD1),
-                    fontWeight: FontWeight.w500,
-                  ),
+                child: Row(
+                  mainAxisSize: MainAxisSize.min, // Important: only take up the space needed by the children
+                  children: <Widget>[
+                    // 1. The Text Widget with Underline
+                    Text(
+                      "Read more",
+                      style: TextStyle(
+                        color: const Color(0xFF671DD1),
+                        fontWeight: FontWeight.w500,
+                        decoration: TextDecoration.underline, // This adds the underline
+                      ),
+                    ),
+                    // 2. The Dropdown Arrow Icon
+                    const Icon(
+                      Icons.arrow_drop_down, // The standard dropdown arrow icon
+                      color: const Color(0xFF671DD1), // Match the text color
+                      size: 24, // Adjust the size as needed
+                    ),
+                  ],
                 ),
               ),
             ),
@@ -458,8 +472,8 @@ class _CampaignViewPageState extends State<CampaignViewPage> {
                   }
                 }
 
-                final brandEmail = userData['email'] ?? '';
-                final brandName = userData['name'] ?? '';
+                final brandEmail = campaign!['brand'] ?? '';
+                final brandName = campaign!['brand'] ?? '';
 
                 final campaignRequest = {
                   "influencerName": influencerName,
@@ -550,6 +564,11 @@ class _CampaignViewPageState extends State<CampaignViewPage> {
                       controller: _pitchController,
                       maxLines: 5,
                       maxLength: 200,
+                      inputFormatters: [
+                        FilteringTextInputFormatter.allow(
+                          RegExp(r"[a-zA-Z\s.,!?'\-]"), // ✅ Only alphabets + punctuation
+                        ),
+                      ],
                       decoration: InputDecoration(
                         hintText: "Type your pitch here...",
                         border: OutlineInputBorder(

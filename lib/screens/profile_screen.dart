@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'package:influencer_dashboard/screens/auth/login_screen.dart';
 import 'package:influencer_dashboard/screens/wallet_page.dart';
 import 'package:influencer_dashboard/screens/webview.dart';
 import 'package:influencer_dashboard/screens/welcome_screen.dart';
@@ -32,7 +33,7 @@ class _ProfileScreenState extends State<ProfileScreen> {
     await prefs.clear();
     Navigator.pushAndRemoveUntil(
       context,
-      MaterialPageRoute(builder: (_) =>  WelcomeScreen()),
+      MaterialPageRoute(builder: (_) =>  LoginScreen()),
           (route) => false,
     );
   }
